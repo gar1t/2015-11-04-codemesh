@@ -1,0 +1,326 @@
+#-*-org-*-
+
+----
+
+Points:
+
+- "There's a function here" (block infers "something going on" - esp
+  if it has a comment) - these are the shadows cast on the cave wall -
+  there's a form, what is it?
+
+- Like observing a person from closed-circuit - you can see his
+  actions but you're not really sure what he's up to
+
+There's a lot of logic here, but it's hard to name. I asked the author
+for help and we agreed that the name would either be a paragraph long
+name reflecting what he just told me it did, or else
+"do-stuff-related-to-cli-init".
+
+Let's invoke the rubber duck.
+
+We need a Tiger CLI. How do we get it? I think simply this is
+resolve-tiger-cli. That's what this is.
+
+But now what? The logic here seems subtle.
+
+In one case we might want to use an existing CLI version - one that's
+already built. In the other case, we might want to build the CLI
+ourselves.
+
+if use-existing-cli; then
+    use-existing-tiger-cli SOME_THING
+else
+    build-new-tiger-cli
+fi
+
+More points:
+
+- We don't want avoid extremes if we can - it's important to remain idiomatic
+
+#+begin_src sh
+  # Update the DEVELOPMENT tiger-cli Docker image
+  if [ -z ${SKIP_RELEASE+x} ]; then
+      pushd containers/cli
+      make clean
+      popd
+
+      pushd release
+      ./release ./VERSIONS-dev $SCRIPT_DIR
+      ln -fs $SCRIPT_DIR/tiger-DEVELOPMENT $SCRIPT_DIR/tiger
+      popd
+  else
+      # Use an existing release, TIGER_CLI_VERSION will have to be
+      # provided by caller
+      ln -fs $SCRIPT_DIR/containers/cli/tiger $SCRIPT_DIR/tiger
+  fi
+#+end_src
+
+Okay, in retrospect, this function should not also be building the
+Tiger CLI used here. This is something it should just use.
+
+There's a tendency to put everything into a big bucket. But then what?
+
+The "logic" is convoluted.
+
+As I refactor this it becomes clearer and clearer that this is just a
+place to put code. In fact, the name of the script "ci.sh" is exactly
+that: "This is where you put the code for the CI stuff."
+
+I want to just rethink this from the start.
+
+How?
+
+I know for sure I want to start again. I want my scripts to be super
+simple. They should be obviously straight forward, without "tricky"
+logic.
+
+What's tricky mean here?
+
+---
+
+Is this just a matter of not using globals? What the hell is the issue
+here?
+
+There are a bunch of problems that are causing problems.
+
+There's no emphasis on separation of concerns. It's not clear to me
+that the "concerns" are understood.
+
+As far I can see, the motivation is to "do stuff".
+
+But the "stuff" here is technically correct - it does what it "ought".
+
+So what's the problem? Is it just a matter of "being a craftsman?" Or
+of having "clean code"?
+
+Emotionally, I fear making changes because I don't know what's going on.
+
+It's also hard for me to use this code locally to see what it might
+do. It's very hard. I have to study it very carefully to understand
+how to even use it.
+
+So what to do?
+
+Some options:
+
+- Let it be, making as few changes as possible - do my best to "get it
+  working as I imagine it ought"
+
+- Refactor it pragmatically, getting it closer to under understandable
+
+- Destroy it with fire and spread the ashes to the four corners of the
+  earth
+
+The first option seems silly in any professional context. I actually
+don't know what context this would apply to.
+
+Sometimes this just isn't possible.
+
+This. But of course this is extreme. But this is how it has to be.
+
+So my approach here is to **understand what's going on** and then be
+able to run things locally and observe their behavior. "Things" in
+this case should each be understandable.
+
+First, I'm going to rename the script to **says what it's supposed to
+do**. Starting something with "ci-" is already an admission of defeat.
+
+So I'm no longer thinking about "doing CI". I'm thinking about the
+operations here:
+
+- Initialize a new cluster
+- Upgrade an existing cluster
+- Test a cluster
+
+-----------------------
+
+Each time you pass an argument to a function in bash you incur some risk.
+
+- It's not always obvious how arguments are passed
+
+  For example:
+
+    do-something $some_arg
+
+  is different from:
+
+    do-something "$some_arg"
+
+- What do you do with the arguments?
+
+  Your only access to args is using positional arguments, e.g. $1, $2
+
+  That's pretty awful for everything but the most trivial functions. So it's
+  a good idea to use variables.
+
+    local color=$1
+
+  But 'local' has some pretty scary implications. I have grown to hate it.
+
+  So I'm doing this:
+
+    _color=$1
+
+Okay, so the arguments are bad, but isn't it worse to use globals?
+Yeah, it is, definitely. Except you have these additional risks.
+
+Let's go ahead and use globals where they make sense. When is that? If
+they apply to the script.
+
+We can avoid global by applying transformations to them using functions.
+
+The "delegate this to someone else" is a very healthy move. It opens
+up options. It keeps operations "in front of you" - i.e. an operation
+can be used like a knife to cut something, rather than - ugh. How do I
+say this??
+
+-----------
+
+This routine is troubling:
+
+  export foo=123
+  run-something-that-uses-foo
+
+Here's a more explicit form:
+
+  foo=123; run-something-that-uses-foo
+
+And this is even more isolated:
+
+  (foo=123; run-something-that-uses-foo)
+
+------------------
+
+I initially thought this would be a matter of just creating functions
+that would name things. No so easy.
+
+This has sent me into a tizzy of teasing out a lot of things.
+
+This code is extremely brittle. It's hard to understand. It's hard to use.
+
+But specifically why?
+
+------------
+
+I wonder how much this is influenced by the "CI" process? Where you
+have all of this apparatus around you and build and build and build
+and never actually use the thing as a human. It only runs "out
+there" - and your touch with it becomes simply "does exit with a zero
+or not?"
+
+------------
+
+Temptation to store a variable once it's already been parsed -
+i.e. see the validate-config operations. Boy isn't it tempting to keep
+that value and use it! How completely stupid that we're not keeping it.
+
+Folks, we're using *bash* here. Why are we doing this? It's not to
+save a millisecond. It's to be readable, easy - get it right. Why
+complicate the code to save a millisecond? Why complicated it to save
+one second?
+
+------------
+
+This bit:
+
+# server ip
+#ip=$(ifconfig | sed -En 's/127.0.0.1//;s/.*inet (addr:)?(([0-9]*\.){3}[0-9]*).$
+# EC2 public ip
+#ip=$(curl -sS ipecho.net/plain)
+export EXTERNAL_IP=$(curl -sS ident.me)
+
+Is there to satisfy the requirements of an external template. How the
+F am I supposed to know that?? A comment? Well, there isn't even that.
+
+------------
+
+"It works" is not sufficient.
+
+------------
+
+#+begin_src sh
+  CONFIG=$SCRIPT_DIR/ci/$PROVIDER-$VENDOR.config
+  if [ ! -f $CONFIG ]; then
+    CONFIG=$SCRIPT_DIR/ci/$PROVIDER.config
+    fi
+    cat $CONFIG | envsubst > ./tiger.config
+
+  for image in castle cjoc master router elasticsearch
+  do
+    if [ -f $SCRIPT_DIR/versions/$image/VERSION ]; then
+        tee -a ./tiger.config << EOF
+        [$image]
+        docker_version            = $(cat $SCRIPT_DIR/versions/$image/VERSION)
+
+  EOF
+
+    fi
+  done
+#+end_src
+
+This manipulation of the CONFIG arg represents an operation. What's
+going on?
+
+We're getting the configuration to use for the project.
+
+---
+
+The sequential nature of bash makes it perfect for a functional
+language implementation. You can think of an operation as a series of
+modifications to state.
+
+---
+
+Creating a function...
+
+- Pick a name - super important and worth spending time on
+- Spell out your arguments - super important and worth spending time on
+- Identify what's global - avoid changing that (should set at start in a
+  well defined phase and treat as immutable)
+- Bear in mind the difficulty of working with variables in bash
+
+----
+
+Always set -eu and pipefail
+
+---
+
+Express a required variable using "${VAR:?}"
+
+---
+
+Script did too many things - too much juggling and switch
+setting. This is a "Rube Goldberg".
+
+---
+
+I think part of this is a function of "building code in the cloud" -
+specifically Jenkins CI scripts.
+
+This is not dissimilar to Chef scripts, which are born and live "in
+the cloud" and evolve as members of a system that is not easily
+replicated and therefore hard to run in isolation.
+
+This may be a problem associated with "running stuff in a complex context".
+
+This is *the* problem that functional model addresses: with a pure
+function there's zero context.
+
+Here might be the main issue:
+
+At what point does "context" become a problem?
+
+---
+
+This is *all* about context and getting rid of it.
+
+---
+
+Programming at a distance - if you have to push code somewhere and
+can't run it locally - quite awful.
+
+---
+
+The whole pipelining is very functional.
+
+xargs e.g.

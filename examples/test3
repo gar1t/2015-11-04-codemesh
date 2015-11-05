@@ -1,0 +1,13 @@
+#!/bin/bash
+
+foo() {
+    _arg1="hello"
+    bar
+    echo "_arg1=$_arg1"
+}
+
+bar() {
+    _arg1="bye"
+    # Do something with _arg1
+}
+

@@ -1,0 +1,34 @@
+#!/bin/bash -eu
+
+do-something-1() {
+    local foo=$(read-foo)
+    echo "1: foo is $foo"
+}
+
+do-something-2() {
+    local foo
+    foo=$(read-foo)
+    echo "2: foo is $foo"
+}
+
+do-something-3() {
+    _foo="$(read-foo)"
+    echo "3: _foo is $_foo"
+}
+
+do-something-4() {
+    _foo="abc"
+    echo "5: _foo is $_foo"
+}
+
+read-foo() {
+    echo "TODO: not implemented" >&2
+    exit 1
+}
+
+#do-something-1
+#do-something-2
+#do-something-3
+do-something-4
+
+echo "_foo is $_foo"

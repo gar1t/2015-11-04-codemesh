@@ -1,0 +1,1104 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+
+    <title>Refactoring In Bash, Functions, and My Personal Neuroses</title>
+
+    <meta name="description" content="A presentation by Garrett Smith at Code Mesh London on November 4, 2015">
+    <meta name="author" content="Garrett Smith">
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+    <link rel="stylesheet" href="css/reveal.min.css">
+    <link rel="stylesheet" href="css/theme/default.css" id="theme">
+    <link rel="stylesheet" href="lib/css/zenburn.css">
+
+    <style>
+      #title h1 {
+        font-size: 180%;
+      }
+
+      #title h2 {
+        margin-top: 50px;
+        font-size: 150%;
+      }
+
+      #title p {
+        font-size: 150%;
+        text-align: center;
+      }
+
+      .reveal h1, .reveal h2, .reveal h3, .reveal h4, .reveal h5, .reveal h6 {
+        letter-spacing: 0;
+        line-height: 1.1;
+      }
+
+      .reveal h1 {
+        font-size: 300%;
+      }
+
+      .reveal h2 {
+        font-size: 250%;
+      }
+
+      .reveal pre code {
+        font-size: 130%;
+        line-height: 1.3;
+        max-height: none;
+      }
+
+      .reveal p {
+        margin: 20px 40px;
+      }
+
+      .reveal li {
+        font-size: 180%;
+        line-height: 1.3;
+        margin-top: 30px;
+        list-style-type: square;
+      }
+
+      .reveal pre code {
+        padding: 20px;
+      }
+
+      .reveal blockquote {
+        width: 80%;
+        padding: 40px;
+        background: #333;
+        text-align: left;
+      }
+
+      .reveal blockquote dt {
+        font-size: 170%;
+        line-height: 115%;
+      }
+
+      .reveal blockquote dd {
+        margin-top: 40px;
+        font-size: 133%;
+        text-align: right;
+      }
+
+      .reveal .qa {
+        font-size: 175%;
+        line-height: 110%;
+        margin: 40px 0;
+      }
+
+      .reveal blockquote p {
+        font-size: 175%;
+      }
+
+      .reveal section img {border:none; background:none;box-shadow:none}
+      .reveal h3 {line-height:1.4;font-size:2.1em}
+      .reveal h4 {line-height:1.2;font-size:1.6em}
+      span.sm {font-size:0.7em}
+
+    </style>
+  </head>
+
+  <body>
+    <div class="reveal">
+      <div class="slides">
+        <section id="title">
+          <h1>Refactoring In Bash, Functions, and My Personal Neuroses</h1>
+          <h2>Code Mesh London<br>November 4, 2015</h2>
+          <p>
+            <a href="http://gar1t.com">Garrett Smith</a> /
+            <a href="http://twitter.com/gar1t">@gar1t</a>
+          </p>
+        </section>
+        
+        <section>
+          <style>
+.reveal .ct-label {color:white; font-size:75%;}
+</style>
+
+<h3 id="onthefunctionaltaoofbash">On the Functional Tao of Bash</h3>
+
+
+        </section>
+        
+        <section>
+          
+
+<pre><code class="bash">find -type f | xargs -I F basename F
+</code></pre>
+
+
+        </section>
+        
+        <section>
+          
+
+<pre><code class="bash">map() {
+    local fun=$1
+    local -a vals=(&quot;${@:2}&quot;)
+    for val in &quot;${vals[@]}&quot;; do
+        eval &quot;$fun $val&quot;
+    done
+}
+
+incr() {
+    echo $(($1 + 1))
+}
+
+map incr 1 2 3 4
+</code></pre>
+
+
+        </section>
+        
+        <section>
+          
+
+<h2 id="bashisnotafunctionallanguage">Bash is not a functional language</h2>
+
+
+        </section>
+        
+        <section>
+          
+
+<h2 id="areallifestory">A Real Life Story</h2>
+
+<ul>
+<li class="fragment">bash script</li>
+<li class="fragment">140 lines of code</li>
+<li class="fragment">named <code>ci.sh</code></li>
+<li class="fragment">ci = &#8220;continuous integration&#8221;</li>
+</ul>
+
+
+        </section>
+        
+        <section>
+          
+
+<h2 id="whybash">Why Bash</h2>
+
+<ul>
+<li class="fragment">It&#8217;s everywhere</li>
+<li class="fragment">Mostly portable across posix systems</li>
+<li class="fragment">Zero impedance mismatch with shell scripting</li>
+</ul>
+
+
+        </section>
+        
+        <section>
+          
+
+<p><img src="installing-nginx-1.png"></p>
+
+
+        </section>
+        
+        <section>
+          
+
+<p><img src="installing-nginx-2.png"></p>
+
+
+        </section>
+        
+        <section>
+          
+
+<h2 id="backtoci.sh">Back to <code>ci.sh</code></h2>
+
+
+        </section>
+        
+        <section>
+          
+
+<p><img src="any-language.png"></p>
+
+
+        </section>
+        
+        <section>
+          
+
+<h4 id="bash">Bash</h4>
+
+<pre><code class="bash">init-project() {
+    echo &quot;Initialzing project at $project_dir&quot;
+    $tiger_cmd init-project &quot;$project_dir&quot; &quot;$tiger_template&quot;
+}
+
+init-config() {
+    resolve-config &quot;$config_in&quot; &gt; &quot;$project_dir/tiger.config&quot;
+}
+
+init-cluster() {
+    pushd-quiet &quot;$project_dir&quot;
+    $tiger_cmd init
+    popd-quiet
+}
+</code></pre>
+
+
+        </section>
+        
+        <section>
+          
+
+<h4 id="python">Python</h4>
+
+<pre><code class="python">def load_server_config(file_name):
+    config = dna.config.parse(file_name)
+    if not config:
+        raise ValueError(&quot;Config file not found: %s&quot; % file_name)
+    return dna.secrets.resolve_config_secrets(config)
+
+def server_name_from_dir(server_dir):
+    return os.path.basename(server_dir)
+
+def match_servers(pattern, location='.'):
+    matched_server_dirs = match_server_dirs(pattern, location)
+    return [load_server(server_dir) for server_dir in matched_server_dirs]
+</code></pre>
+
+
+        </section>
+        
+        <section>
+          
+
+<h4 id="erlang">Erlang</h4>
+
+<pre><code class="erlang">encode_meta([]) -&gt; &lt;&lt;&gt;&gt;;
+encode_meta(Meta) -&gt; erlang:term_to_binary(Meta).
+
+date_to_timestamp(Date) when is_integer(Date) -&gt; Date.
+
+maybe_auto_ignore_panic(Key, State) -&gt;
+    maybe_auto_ignore_panic(key_matches_auto_ignore(Key), Key, State).
+
+key_matches_auto_ignore(Key) -&gt;
+    key_matches(Key, auto_ignore_patterns()).
+
+</code></pre>
+
+
+        </section>
+        
+        <section>
+          
+
+<p><img src="ocd.jpg"></p>
+
+
+        </section>
+        
+        <section>
+          
+
+<p><img src="obvious.jpg"></p>
+
+
+        </section>
+        
+        <section>
+          
+
+<h2 id="goals">Goals</h2>
+
+<ul>
+<li class="fragment">At-a-glance obviousness</li>
+<li class="fragment">No surprises (non obvious)</li>
+<li class="fragment">Clear intent over &#8220;correctness&#8221;</li>
+</ul>
+
+
+        </section>
+        
+        <section>
+          
+
+<h1 id="ci.sh"><code>ci.sh</code></h1>
+
+<ul>
+<li class="fragment">Our &#8220;continuous integration&#8221; script</li>
+<li class="fragment">I need to make a relatively simple change</li>
+<li class="fragment">At least it seems that way</li>
+</ul>
+
+
+        </section>
+        
+        <section>
+          
+
+<h1 id="remarks">Remarks</h1>
+
+
+        </section>
+        
+        <section>
+          
+
+<h4 id="ci.sh-part1"><code>ci.sh</code> - part 1</h4>
+
+<pre><code class="bash">#!/bin/bash -ex
+# Used for CI Integration Test
+
+PROVIDER=${1/-*/}
+VENDOR=${1/*-/}
+export CLUSTER_NAME=${2:-tiger-testing}
+PROJECT_DIR=$(readlink -f .tiger)
+SCRIPT_DIR=$(readlink -f .)
+
+export TIGER_PROJECT_DIR=$PROJECT_DIR
+
+export PATH=$SCRIPT_DIR:$PATH
+
+export DEBIAN_FRONTEND=noninteractive
+</code></pre>
+
+
+        </section>
+        
+        <section>
+          
+
+<h4 id="ci.sh-part2"><code>ci.sh</code> - part 2</h4>
+
+<pre><code class="bash"># Update the DEVELOPMENT tiger-cli Docker image
+if [ -z ${SKIP_RELEASE+x} ]; then
+    pushd containers/cli
+      make clean
+    popd
+
+    pushd release
+    ./release ./VERSIONS-dev $SCRIPT_DIR
+    ln -fs $SCRIPT_DIR/tiger-DEVELOPMENT $SCRIPT_DIR/tiger
+    popd
+else
+    # Use an existing release, TIGER_CLI_VERSION will have to be
+    # provided by caller
+    ln -fs $SCRIPT_DIR/containers/cli/tiger $SCRIPT_DIR/tiger
+fi
+</code></pre>
+
+
+        </section>
+        
+        <section>
+          
+
+<h4 id="ci.sh-part2aside"><code>ci.sh</code> - part 2 (aside)</h4>
+
+<pre><code class="bash">update-the-development-tiger-cli-docker-image() {
+    ...
+}
+</code></pre>
+
+
+        </section>
+        
+        <section>
+          
+
+<h4 id="ci.sh-part2aside"><code>ci.sh</code> - part 2 (aside)</h4>
+
+<pre><code class="bash">update-the-development-tiger-cli-docker-image() {
+    if [ -z ${SKIP_RELEASE+x} ]; then
+        pushd containers/cli
+          make clean
+        popd
+
+        pushd release
+        ./release ./VERSIONS-dev $SCRIPT_DIR
+        ln -fs $SCRIPT_DIR/tiger-DEVELOPMENT $SCRIPT_DIR/tiger
+        popd
+    else
+        # Use an existing release, TIGER_CLI_VERSION will have to be
+        # provided by caller
+        ln -fs $SCRIPT_DIR/containers/cli/tiger $SCRIPT_DIR/tiger
+    fi
+}
+</code></pre>
+
+
+        </section>
+        
+        <section>
+          
+
+<h4 id="ci.sh-part2aside"><code>ci.sh</code> - part 2 (aside)</h4>
+
+<pre><code class="bash">update-the-development-tiger-cli-docker-image() {
+    if [ -z ${SKIP_RELEASE+x} ]; then
+        pushd containers/cli
+          make clean
+        popd
+
+        pushd release
+        ./release ./VERSIONS-dev $SCRIPT_DIR
+        ln -fs $SCRIPT_DIR/tiger-DEVELOPMENT $SCRIPT_DIR/tiger
+        popd
+    else
+        use-an-existing-release
+    fi
+}
+</code></pre>
+
+
+        </section>
+        
+        <section>
+          
+
+<h4 id="ci.sh-part2aside"><code>ci.sh</code> - part 2 (aside)</h4>
+
+<pre><code class="bash">update-the-development-tiger-cli-docker-image() {
+    if [ -z ${SKIP_RELEASE+x} ]; then
+        i-sure-wish-there-was-a-comment-here-heck-just-do-stuff
+    else
+        use-an-existing-release
+    fi
+}
+</code></pre>
+
+
+        </section>
+        
+        <section>
+          
+
+<h4 id="ci.sh-part2aside"><code>ci.sh</code> - part 2 (aside)</h4>
+
+<pre><code class="bash">update-the-development-tiger-cli-docker-image() {
+    if skip-release-env-is-not-set; then
+        i-sure-wish-there-was-a-comment-here-heck-just-do-stuff
+    else
+        use-an-existing-release
+    fi
+}
+</code></pre>
+
+
+        </section>
+        
+        <section>
+          
+
+<h4 id="ci.sh-part2"><code>ci.sh</code> - part 2</h4>
+
+<pre><code class="bash"># Update the DEVELOPMENT tiger-cli Docker image
+if [ -z ${SKIP_RELEASE+x} ]; then
+    pushd containers/cli
+      make clean
+    popd
+
+    pushd release
+    ./release ./VERSIONS-dev $SCRIPT_DIR
+    ln -fs $SCRIPT_DIR/tiger-DEVELOPMENT $SCRIPT_DIR/tiger
+    popd
+else
+    # Use an existing release, TIGER_CLI_VERSION will have to be
+    # provided by caller
+    ln -fs $SCRIPT_DIR/containers/cli/tiger $SCRIPT_DIR/tiger
+fi
+</code></pre>
+
+
+        </section>
+        
+        <section>
+          
+
+<h4 id="ci.sh-part2aside"><code>ci.sh</code> - part 2 (aside)</h4>
+
+<pre><code class="bash">create-tiger-release-i-think() {
+    pushd containers/cli
+      make clean
+    popd
+
+    pushd release
+    ./release ./VERSIONS-dev $SCRIPT_DIR
+    ln -fs $SCRIPT_DIR/tiger-DEVELOPMENT $SCRIPT_DIR/tiger
+    popd
+}
+</code></pre>
+
+
+        </section>
+        
+        <section>
+          
+
+<h4 id="ci.sh-part2aside"><code>ci.sh</code> - part 2 (aside)</h4>
+
+<pre><code class="bash">create-tiger-release-im-pretty-sure-with-odd-cli-clean-first() {
+    pushd containers/cli
+      make clean
+    popd
+
+    pushd release
+    ./release ./VERSIONS-dev $SCRIPT_DIR
+    ln -fs $SCRIPT_DIR/tiger-DEVELOPMENT $SCRIPT_DIR/tiger
+    popd
+}
+</code></pre>
+
+
+        </section>
+        
+        <section>
+          
+
+<h4 id="ci.sh-part2aside"><code>ci.sh</code> - part 2 (aside)</h4>
+
+<pre><code class="bash">update-the-development-tiger-cli-docker-image() {
+   if skip-release-env-is-not-set; then
+      create-tiger-release-im-pretty-sure-with-odd-cli-clean-first
+   else
+      use-an-existing-release
+   fi
+}
+</code></pre>
+
+
+        </section>
+        
+        <section>
+          
+
+<h4 id="ci.sh-part4"><code>ci.sh</code> - part 4</h4>
+
+<pre><code class="bash"># Upgrade existing cluster
+if [ -f $PROJECT_DIR/shared/tiger.config ]; then
+  mv $PROJECT_DIR/shared/tiger.config $PROJECT_DIR/shared/project.config
+fi
+
+# pass on terraform and dna vars with credentials to Tiger cli container
+vars=$(env | grep '^TF_VAR_\|^DNA_ENV_' | sed -e 's/=.*//')
+export DOCKER_ARGS=&quot;$(for v in $vars; do echo -n &quot;-e $v &quot;; done) $DOCKER_ARGS&quot;
+
+echo &quot;Init project: ${CLUSTER_NAME}&quot;''
+mkdir -p $PROJECT_DIR
+pushd $PROJECT_DIR
+tiger init-project --reinit . $PROVIDER
+popd
+</code></pre>
+
+
+        </section>
+        
+        <section>
+          
+
+<h4 id="ci.sh-part5"><code>ci.sh</code> - part 5</h4>
+
+<pre><code class="bash">echo &quot;Creating configuration&quot;
+# server ip
+#ip=$(ifconfig | sed -En 's/127.0.0.1//;s/.*inet (addr:)?(([0-9]*\.){3}[0-9]*).*/\2/p' | head -n 1)
+# EC2 public ip
+#ip=$(curl -sS ipecho.net/plain)
+export EXTERNAL_IP=$(curl -sS ident.me)
+pushd $PROJECT_DIR
+
+echo ip is ${EXTERNAL_IP}
+CONFIG=$SCRIPT_DIR/ci/$PROVIDER-$VENDOR.config
+if [ ! -f $CONFIG ]; then
+  CONFIG=$SCRIPT_DIR/ci/$PROVIDER.config
+fi
+cat $CONFIG | envsubst &gt; ./tiger.config
+</code></pre>
+
+
+        </section>
+        
+        <section>
+          
+
+<h4 id="ci.sh-part6"><code>ci.sh</code> - part 6</h4>
+
+<pre><code class="bash">for image in castle cjoc master router elasticsearch
+do
+  if [ -f $SCRIPT_DIR/versions/$image/VERSION ]; then
+    tee -a ./tiger.config &lt;&lt; EOF
+[$image]
+docker_version            = $(cat $SCRIPT_DIR/versions/$image/VERSION)
+
+EOF
+
+  fi
+done
+</code></pre>
+
+
+        </section>
+        
+        <section>
+          
+
+<h4 id="ci.sh-part7"><code>ci.sh</code> - part 7</h4>
+
+<pre><code class="bash">echo &quot;Setting default credentials&quot;
+mkdir -p $PROJECT_DIR/shared
+echo &quot;marathon:tiger-admin&quot; &gt; $PROJECT_DIR/shared/marathon-creds
+echo &quot;tiger-admin&quot; &gt; $PROJECT_DIR/shared/router-pwd
+echo &quot;admin tiger-admin &quot; &gt; $PROJECT_DIR/shared/elasticsearch-creds
+
+if [ -e ./.tiger-initialized ]; then
+    echo &quot;Running tiger upgrade&quot;
+    tiger upgrade
+else
+    echo &quot;Running tiger init&quot;
+    tiger init
+fi
+export MARATHON_CREDENTIALS=$(cat $PROJECT_DIR/shared/marathon-creds)
+echo Marathon credentials: $MARATHON_CREDENTIALS
+
+popd
+</code></pre>
+
+
+        </section>
+        
+        <section>
+          
+
+<h4 id="ci.sh-part8"><code>ci.sh</code> - part 8</h4>
+
+<pre><code class="bash">export MARATHON_CREDENTIALS=$MARATHON_CREDENTIALS
+if [ &quot;$PROVIDER&quot; = &quot;aws&quot; ]; then
+  LOAD_BALANCER_RESOURCE=elb
+else
+  LOAD_BALANCER_RESOURCE=controller-1
+fi
+export CLUSTER_URL=$(terraform output -state=&quot;$PROJECT_DIR/.terraform/$LOAD_BALANCER_RESOURCE/terraform.tfstate&quot; hostname_base)
+cat $SCRIPT_DIR/ci/index.html | envsubst &gt; ./index.html
+
+# wait for cjoc
+set +ex
+export CJOC_PING_MAX_RETRIES=25
+for i in `seq 1 $CJOC_PING_MAX_RETRIES`; do
+  echo &quot;Waiting for tasks to be alive... attempt $i of $CJOC_PING_MAX_RETRIES&quot;
+  curl -fsSL --user $MARATHON_CREDENTIALS -H &quot;Accept: application/json&quot; http://marathon.$CLUSTER_URL/v2/apps/jce/cjoc/tasks | grep '&quot;alive&quot;:true' &amp;&amp; \
+    (! curl -fsSL --user $MARATHON_CREDENTIALS -H &quot;Accept: application/json&quot; http://marathon.$CLUSTER_URL/v2/apps/jce/castle/tasks | grep -q '&quot;alive&quot;:false') &amp;&amp; \
+    curl -fsSL --user $MARATHON_CREDENTIALS -H &quot;Accept: application/json&quot; http://marathon.$CLUSTER_URL/v2/apps/jce/elasticsearch/tasks | grep '&quot;alive&quot;:true' &amp;&amp; \
+    curl -fsSL --user $MARATHON_CREDENTIALS -H &quot;Accept: application/json&quot; http://marathon.$CLUSTER_URL/v2/apps/masters/eval-master/tasks &amp;&amp; \
+    break;
+  sleep 5
+done
+set -ex
+</code></pre>
+
+
+        </section>
+        
+        <section>
+          
+
+<h4 id="ci.sh-part9"><code>ci.sh</code> - part 9</h4>
+
+<pre><code class="bash"># run tests
+pushd $PROJECT_DIR
+echo &quot;Running tiger check&quot;
+tiger check
+popd
+</code></pre>
+
+
+        </section>
+        
+        <section>
+          
+
+<h2 id="concerns">Concerns</h2>
+
+<ul>
+<li class="fragment">Clear/obvious intent</li>
+<li class="fragment">State life cycle - create, read, modify</li>
+<li class="fragment">Interfaces (vars, exported vars, cmd/function args)</li>
+<li class="fragment">The rubber duck doesn&#8217;t understand</li>
+</ul>
+
+
+        </section>
+        
+        <section>
+          
+
+<h3 id="rainbowwolf">Rainbow Wolf</h3>
+
+<p><img src="rainbow-wolf-2.jpg" height="500"></p>
+
+
+        </section>
+        
+        <section>
+          
+
+<h1 id="ci-init-cluster"><code>ci-init-cluster</code></h1>
+
+
+        </section>
+        
+        <section>
+          
+
+<h3 id="ci-init-clusteroverview"><code>ci-init-cluster</code> Overview</h3>
+
+<ul>
+<li class="fragment">Header ceremony</li>
+<li class="fragment">Variable definitions</li>
+<li class="fragment">Include &#8220;libs&#8221;</li>
+<li class="fragment">Function definitions</li>
+<li class="fragment">Script implementation</li>
+</ul>
+
+
+        </section>
+        
+        <section>
+          
+
+<h4 id="ci-init-cluster"><code>ci-init-cluster</code></h4>
+
+<pre><code class="bash"># Header ceremony
+...
+# Variable definitions + includes
+...
+# Function definitions
+...
+
+init-new-cluster
+</code></pre>
+
+
+        </section>
+        
+        <section>
+          
+
+<h4 id="ci-init-cluster-headervarslibs"><code>ci-init-cluster</code> - Header, Vars, Libs</h4>
+
+<pre><code class="bash">#!/bin/bash -eu
+# Creates a Tiger cluster from scratch
+
+set -o pipefail
+
+if ${trace:-false}; then
+    set -x
+fi
+
+ci_dir=$( cd &quot;$( dirname &quot;${BASH_SOURCE[0]}&quot; )&quot; &amp;&amp; pwd )
+
+. &quot;$ci_dir/ci-support&quot;
+
+</code></pre>
+
+
+        </section>
+        
+        <section>
+          
+
+<h4 id="ci-init-cluster-functions"><code>ci-init-cluster</code> - Functions</h4>
+
+<pre><code class="bash">init-new-cluster() {
+    destroy-existing-cluster
+    clean-project
+    init-project
+    init-config
+    init-cluster
+    test-cluster
+}
+</code></pre>
+
+
+        </section>
+        
+        <section>
+          
+
+<h4 id="ci-init-cluster-functions"><code>ci-init-cluster</code> - Functions</h4>
+
+<pre><code class="bash">destroy-existing-cluster() {
+    if can-destroy-cluster; then
+        echo &quot;Destroying Tiger cluster&quot;
+        pushd-quiet &quot;$project_dir&quot;
+        $tiger_cmd refresh-project 2&gt; /dev/null
+        $tiger_cmd destroy -f
+        popd-quiet
+    fi
+}
+
+can-destroy-cluster() {
+    test -e &quot;$project_dir/.tiger-project&quot; -a \
+         -e &quot;$project_dir/.dna-project&quot; -a \
+         -e &quot;$project_dir/servers/tiger&quot;
+}
+</code></pre>
+
+
+        </section>
+        
+        <section>
+          
+
+<h4 id="ci-init-cluster-functions"><code>ci-init-cluster</code> - Functions</h4>
+
+<pre><code class="bash">init-project() {
+    echo &quot;Initialzing project at $project_dir&quot;
+    $tiger_cmd init-project &quot;$project_dir&quot; &quot;$tiger_template&quot;
+}
+
+init-config() {
+    resolve-config &quot;$config_in&quot; &gt; &quot;$project_dir/tiger.config&quot;
+}
+
+init-cluster() {
+    pushd-quiet &quot;$project_dir&quot;
+    $tiger_cmd init
+    popd-quiet
+}
+
+test-cluster() {
+    pushd-quiet &quot;$project_dir&quot;
+    $tiger_cmd check default
+    popd-quiet
+}
+</code></pre>
+
+
+        </section>
+        
+        <section>
+          
+
+<h1 id="done">Done!</h1>
+
+
+        </section>
+        
+        <section>
+          
+
+<h2 id="adviceforbash">Advice for Bash</h2>
+
+
+        </section>
+        
+        <section>
+          
+
+<p><img src="globals-bad.jpg" height="500"></p>
+
+
+        </section>
+        
+        <section>
+          
+
+<h2 id="globalsinbash">Globals in Bash</h2>
+
+<ul>
+<li class="fragment">File system</li>
+<li class="fragment">Commands (shell path)</li>
+<li class="fragment">Shell environment</li>
+</ul>
+
+
+        </section>
+        
+        <section>
+          
+
+<h3 id="rulesofthumbforglobals">Rules of Thumb for &#8220;Globals&#8221;</h3>
+
+<ul>
+<li class="fragment">Avoid required environment variables (programming through globals)</li>
+<li class="fragment">Minimize script variables</li>
+<li class="fragment">Define script variables using args</li>
+<li class="fragment">Use functions to compute derivable values</li>
+</ul>
+
+
+        </section>
+        
+        <section>
+          
+
+<pre><code class="bash">#!/bin/bash -eu
+
+project=&quot;${1:?usage: $0 PROJECT}&quot;
+
+scripts-dir() {
+    echo &quot;$project/scripts&quot;
+}
+
+echo &quot;Scripts dir is $(scripts-dir)&quot;
+</code></pre>
+
+
+        </section>
+        
+        <section>
+          
+
+<h1 id="otherpatterns">Other Patterns</h1>
+
+
+        </section>
+        
+        <section>
+          
+
+<h2 id="pipelining">Pipelining</h2>
+
+<pre><code class="bash">some-list() {
+     echo 1
+     echo 2
+     echo 3
+}
+
+do-something() {
+    echo &quot;Got $1&quot;
+}
+
+some-list | while read x; do
+    do-something $x
+done
+</code></pre>
+
+
+        </section>
+        
+        <section>
+          
+
+<h2 id="booleanchecks">Boolean Checks</h2>
+
+<pre><code class="bash">is-filename() {
+    if [[ &quot;${1:?}&quot; =~ &quot;/&quot; ]]; then true; else false; fi
+}
+</code></pre>
+
+<pre><code class="bash">is-file() {
+    test -e &quot;${1:?}&quot;
+}
+</code></pre>
+
+
+        </section>
+        
+        <section>
+          
+
+<h2 id="failingfast">Failing Fast</h2>
+
+<pre><code class="bash">set -e
+set -u
+set -o pipefail
+</code></pre>
+
+
+        </section>
+        
+        <section>
+          
+
+<h2 id="arguments">Arguments</h2>
+
+<pre><code class="bash">foo() {
+    local required=&quot;${1:?}&quot;
+    local optional=&quot;${2:-default}&quot;
+
+    local watch_out_for_me=&quot;$(something-that-might-fail)&quot;
+
+    local safe_form
+    safe_form=&quot;$(something-that-might-fail)&quot;
+}
+</code></pre>
+
+
+        </section>
+        
+        <section>
+          
+
+<h2 id="uselocal">Use Local!</h2>
+
+<pre><code>foo() {
+    _arg1=&quot;hello&quot;
+    bar
+    echo &quot;_arg1=$_arg1&quot;
+}
+
+bar() {
+    _arg1=&quot;bye&quot;
+    # Do something with _arg1
+}
+</code></pre>
+
+
+        </section>
+        
+        <section>
+          
+
+<h2 id="wrappingup">Wrapping Up</h2>
+
+<ul>
+<li class="fragment">Bash is not a functional language</li>
+<li class="fragment">Programming is not either/or</li>
+<li class="fragment">Everyone has his or her own personal issues</li>
+<li class="fragment">They&#8217;re wrong</li>
+<li class="fragment">JK LOL OMG WTF</li>
+</ul>
+
+
+        </section>
+        
+        <section>
+          
+
+<h2 id="discussion">Discussion</h2>
+
+<h4 id="gar1tontwitter">@gar1t on Twitter</h4>
+
+        </section>
+        
+      </div>
+    </div>
+  </body>
+
+  <script src="lib/js/head.min.js"></script>
+  <script src="js/reveal.min.js"></script>
+  <script type="text/javascript" src="https://www.google.com/jsapi"></script>
+
+  <script>
+    Reveal.initialize({
+        controls: false,
+        progress: true,
+        history: true,
+        center: true,
+        width: 960,
+        height: 700,
+        margin: 0.1,
+        minScale: 0.2,
+        maxScale: 1.0,
+        theme: Reveal.getQueryHash().theme || 'night',
+        transition: Reveal.getQueryHash().transition || 'fade',
+        dependencies: [
+            { src: 'lib/js/classList.js', condition: function() { return !document.body.classList; } },
+            { src: 'plugin/markdown/marked.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+            { src: 'plugin/markdown/markdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+            { src: 'plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } },
+            { src: 'plugin/zoom-js/zoom.js', async: true, condition: function() { return !!document.body.classList; } },
+            { src: 'plugin/notes/notes.js', async: true, condition: function() { return !!document.body.classList; } }
+        ]
+    });
+  </script>
+</html>
