@@ -2,18 +2,11 @@
 
 data(_) ->
     #{
-      title       => "Refactoring In Bash, Functions, and My Personal Neuroses",
-      description => "A presentation by Garrett Smith at Code Mesh London "
-                     "on November 4, 2015",
-      where       => "Code Mesh London",
-      date        => "November 4, 2015",
-      author      => "Garrett Smith",
-      twitter     => "gar1t",
-      blog        => "http://gar1t.com",
-
+      title       => "Chicago ML Kick Off with Professor David McAllester",
+      where       => "National Association of Realtors, Chicago",
+      date        => "April 21, 2016",
       transition  => "fade",
       theme       => "night",
-
       slides      => {apply, fun slides/1, {markdown, "slides.md"}}
      }.
 
